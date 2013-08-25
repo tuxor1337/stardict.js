@@ -3,12 +3,15 @@ stardict.js
 
 JavaScript API for handling dictionaries in StarDict format.
 
+The code depends on two further javascript libraries, namely:
+
+https://github.com/tuxor1337/dictzip.js
+https://github.com/augustl/js-inflate
+
+referred to in the code as "DictZipFile" and "JSInflate.inflate" respectively.
+
 Example Code
 ---
-
-Using DictZip API from https://github.com/tuxor1337/dictzip.js and js-inflate API from
-https://github.com/augustl/js-inflate we get:
-
 
     var dict = new StarDict();
     
