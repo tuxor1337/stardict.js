@@ -1,7 +1,7 @@
 stardict.js
 ==========
 
-JavaScript API for handling dictionaries in StarDict format.
+JavaScript library for handling dictionaries in StarDict format.
 
 The code depends on two further javascript libraries, namely:
 
@@ -43,5 +43,5 @@ Further reading
 
 Format documentation (original documentation is lost): http://code.google.com/p/babiloo/wiki/StarDict_format
  
-Python API: http://code.google.com/p/pytoolkits/source/browse/trunk/utils/stardict/StarDict.py  
-Java API: http://code.google.com/p/toolkits/source/browse/trunk/android/YAStarDict/src/com/googlecode/toolkits/stardict/StarDict.java
+Python lib: http://code.google.com/p/pytoolkits/source/browse/trunk/utils/stardict/StarDict.py  
+Java lib: http://code.google.com/p/toolkits/source/browse/trunk/android/YAStarDict/src/com/googlecode/toolkits/stardict/StarDict.java
