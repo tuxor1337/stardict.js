@@ -5,8 +5,8 @@ JavaScript API for handling dictionaries in StarDict format.
 
 The code depends on two further javascript libraries, namely:
 
-https://github.com/tuxor1337/dictzip.js
-https://github.com/augustl/js-inflate
+- https://github.com/tuxor1337/dictzip.js  
+- https://github.com/augustl/js-inflate
 
 referred to in the code as "DictZipFile" and "JSInflate.inflate" respectively.
 
