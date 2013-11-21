@@ -55,8 +55,9 @@
                 "idxfilesize": "",
                 "sametypesequence": "",
             };
-            var is_dz = false, dict;
+            var is_dz = false;
             var that = this;
+            var dict;
             
             function process_syn() {
                 if(files["syn"] != null) {
@@ -74,13 +75,31 @@
                                     i += 5, j = i;
                                 }
                             }
-                            theDict.onsuccess();
+                            synonyms.sort(function(a,b) {
+                                if (a[0] > b[0]) return 1;
+                                if (a[0] < b[0]) return -1;
+                                return 0;
+                            });
+                            process_res();
                         };
                     })(that);
                     reader.readAsBinaryString(f);
                 } else {
+                    process_res()
+                }
+            }
+            
+            function process_res() {
+                if(files["res"].length > 0) {
+                    console.log("Processing res files...");
+                    filelist = files["res"];
+                    files["res"] = [];
+                    that.add_resources(filelist);
+                    that.onsuccess();
+                } else {
                     that.onsuccess();
                 }
+                that.loaded = true;
             }
             
             function process_dict() {
@@ -172,9 +191,11 @@
             this.onmatch = function () { };
             this.onerror = function (err) { console.err(err); };
             this.onsuccess = function () { };
+            this.loaded = false;
             
             this.load = function (main_files, res_files) {
                 if(typeof res_files === "undefined") res_files = [];
+                files["res"] = res_files;
                 
                 ["idx","syn","dict","dict.dz","ifo"].forEach(function(d) {
                     files[d] = null;
@@ -213,7 +234,12 @@
                         wid = synonyms[i][1]; break;
                     }
                 }
-                if(wid == -1) dict.onmatch(null);
+                if(wid == -1) this.onmatch(null);
+                else this.lookup_id(wid);
+            }
+            
+            this.lookup_id = function (wid) {
+                console.log("looking up id " + wid);
                 if(is_dz) dict.read(index[wid][1], index[wid][2]);
                 else {
                     f = files["dict"].slice(
@@ -228,14 +254,38 @@
             }
             
             this.lookup_fuzzy = function (word) {
+                var word_lower = word.toLowerCase();
                 var matches = [];
                 console.log("looking up " + word + "%");
-                synonyms.forEach(function (syn) {
-                    if(syn[0].substr(0,word.length) == word) {
-                        matches.push(syn[0]);
+                for(var s = 0; s < synonyms.length; s++) {
+                    if(synonyms[s][0].substr(0,word.length).toLowerCase() == word_lower) {
+                        matches.push(synonyms[s]);
                     }
-                });
+                    if(matches.length > 20) break;
+                }
                 return matches;
+            }
+            
+            this.add_resources = function (res_filelist) {
+                var filenames = "";
+                for(var f = 0; f < res_filelist.length; f++) {
+                    files["res"].push(res_filelist[f]);
+                    filenames += res_filelist[f].name + ", ";
+                }
+                console.log("new res-files: " + filenames);
+            }
+            
+            this.request_res = function (filename) {
+                filename = filename.replace(/^\x1E/, '');
+                filename = filename.replace(/\x1F$/, '');
+                for(var f = 0; f < files["res"].length; f++) {
+                    if(filename == files["res"][f].name) {
+                        console.log("Found resource " + filename);
+                        return files["res"][f];
+                    }
+                }
+                console.log("Resource "+filename+" not available");
+                return null;
             }
         }
         
