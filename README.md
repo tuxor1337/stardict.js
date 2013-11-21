@@ -18,9 +18,13 @@ Example Code
     $("input[type=file]").change(function(evt) {
         dict.onsuccess = (function (theDict) {
             return function () {
-                theDict.onmatch = function (str, type) {
-                    console.log("type=" + type);
-                    console.log("string=" + str);
+                theDict.onmatch = function (data_arr) {
+                    data_arr.forEach(function (d) {
+                        type = d[1];
+                        data = d[0];
+                        console.log("type=" + type);
+                        console.log("string=" + data);
+                    });
                 };
                 
                 theDict.lookup("cat");
