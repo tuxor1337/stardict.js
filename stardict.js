@@ -264,16 +264,26 @@
                 }
             };
             
-            this.lookup_fuzzy = function (word) {
-                var word_lower = word.toLowerCase();
-                var matches = [];
-                for(var s = 0; s < synonyms.length; s++) {
-                    if(synonyms[s][0].substr(0,word.length).toLowerCase() == word_lower) {
-                        matches.push(synonyms[s]);
+            this.lookup_term = function (word, fuzzy) {
+                if("undefined" === typeof fuzzy) fuzzy = false;
+                if(fuzzy) {
+                    var word_lower = word.toLowerCase();
+                    var matches = [];
+                    for(var s = 0; s < synonyms.length; s++) {
+                        if(synonyms[s][0]
+                            .substr(0,word.length)
+                            .toLowerCase() == word_lower) {
+                            matches.push(synonyms[s]);
+                        }
+                        if(matches.length > 20) break;
                     }
-                    if(matches.length > 20) break;
+                    return matches;
+                } else {
+                    for(var s = 0; s < synonyms.length; s++) {
+                        if(synonyms[s][0] == word) return synonyms[s];
+                    }
+                    return null;
                 }
-                return matches;
             };
             
             this.add_resources = function (res_filelist) {
