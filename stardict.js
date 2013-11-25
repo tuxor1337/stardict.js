@@ -41,7 +41,36 @@
         }
         return string;
     }
-
+    
+    function merge_sorted(a, b, callbk) {
+        if("undefined" === typeof callbk) {
+            callbk = function (x,y) {
+                if (x > y) return 1;
+                if (x < y) return -1;
+                return 0;
+            };
+        }
+        var result = [], ai = 0, bi = 0;
+        while (true) {
+            if ( ai < a.length && bi < b.length) {
+                test = callbk(a[ai],b[bi]);
+                if (test == -1) result.push(a[ai++]);
+                else if (test == 1) result.push(b[bi++]);
+                else {
+                    result.push(a[ai++]);
+                    result.push(b[bi++]);
+                }
+            } else if (ai < a.length) {
+                result.push.apply(result, a.slice(ai, a.length));
+                break;
+            } else if (bi < b.length) {
+                result.push.apply(result, b.slice(bi, b.length));
+                break;
+            } else break;
+        }
+        return result;
+    }
+    
     var StarDict = (function () {
         var cls = function() {
             var files = { };
@@ -61,29 +90,30 @@
             
             function process_syn() {
                 if(files["syn"] != null) {
-                    console.log("Processing syn file...");
-                    f = f.mozSlice(0,1000); // testing purposes
                     reader = new FileReader();
                     reader.onload = (function (theDict) {
                         return function(e) {
                             blob = e.target.result;
+                            var syn_buf = [];
                             for(i = 0, j = 0; i < blob.length; i++) {
                                 if(blob[i] == "\0") {
                                     synonym = readUTF8String(blob.slice(j,i));
                                     wid = getUIntAt(blob,i+1);
-                                    synonyms.push([synonym,wid]);
+                                    syn_buf.push([synonym,wid]);
                                     i += 5, j = i;
                                 }
                             }
-                            synonyms.sort(function(a,b) {
-                                if (a[0] > b[0]) return 1;
-                                if (a[0] < b[0]) return -1;
-                                return 0;
+                            synonyms = merge_sorted(synonyms, syn_buf,
+                                function (a,b) {
+                                    a = a[0].toLowerCase(), b = b[0].toLowerCase();
+                                    if (a > b) return 1;
+                                    if (a < b) return -1;
+                                    return 0;
                             });
                             process_res();
                         };
                     })(that);
-                    reader.readAsBinaryString(f);
+                    reader.readAsBinaryString(files["syn"]);
                 } else {
                     process_res()
                 }
@@ -91,33 +121,18 @@
             
             function process_res() {
                 if(files["res"].length > 0) {
-                    console.log("Processing res files...");
                     filelist = files["res"];
                     files["res"] = [];
                     that.add_resources(filelist);
+                    that.loaded = true;
                     that.onsuccess();
                 } else {
+                    that.loaded = true;
                     that.onsuccess();
-                }
-                that.loaded = true;
-            }
-            
-            function process_dict() {
-                if(files["dict"] == null) {
-                    console.log("Processing dictzip file...");
-                    is_dz = true;
-                    dict = new DictZipFile(JSInflate.inflate);
-                    dict.onsuccess = process_syn;
-                    dict.onread = process_dictdata;
-                    dict.load(files["dict.dz"]);
-                } else { 
-                    is_dz = false;
-                    process_syn();
                 }
             }
             
             function process_idx() {
-                console.log("Processing idx file...");
                 reader = new FileReader();
                 reader.onload = function(e) {
                     blob = e.target.result;
@@ -131,13 +146,12 @@
                             i += 9, j = i;
                         }
                     }
-                    process_dict();
+                    process_syn();
                 };
                 reader.readAsBinaryString(files["idx"]);
             }
             
             function process_ifo() {
-                console.log("Processing ifo file...");
                 reader = new FileReader();
                 reader.onload = (function (theDict) {
                     return function(e) {
@@ -156,7 +170,7 @@
                 reader.readAsText(files["ifo"]);
             }
             
-            function process_dictdata(data) {
+            function process_dictdata(data, callbk) {
                 if("" != keywords["sametypesequence"]) {
                     type_str = keywords["sametypesequence"];
                     is_sts = true;
@@ -185,10 +199,9 @@
                     if(data.length == 0 || (is_sts && type_str == ""))
                         break;
                 }
-                that.onmatch(data_arr);
+                callbk(data_arr);
             }
             
-            this.onmatch = function () { };
             this.onerror = function (err) { console.err(err); };
             this.onsuccess = function () { };
             this.loaded = false;
@@ -201,10 +214,7 @@
                     files[d] = null;
                     for(var i=0; i < main_files.length; i++) {
                         ext = main_files[i].name.substr(-1-d.length);
-                        if(ext == "." + d) {
-                            files[d] = main_files[i];
-                            console.log(d+"-file: " + main_files[i].name);
-                        }
+                        if(ext == "." + d) files[d] = main_files[i];
                     }
                 });
                 
@@ -218,45 +228,45 @@
                     return;
                 }
                 
-                if(files["dict"] == null && files["dict.dz"] == null) {
+                if(files["dict"] != null) is_dz = false;
+                else if(files["dict.dz"] != null) is_dz = true;
+                else {
                     this.onerror("Missing *.dict(.dz) file!");
                     return;
                 }
                 
                 process_ifo();
-            }
+            };
             
-            this.lookup = function (word) {
-                var wid = -1;
-                console.log("looking up " + word);
-                for(var i = 0; i < synonyms.length; i++) {
-                    if(synonyms[i][0] == word) {
-                        wid = synonyms[i][1]; break;
-                    }
-                }
-                if(wid == -1) this.onmatch(null);
-                else this.lookup_id(wid);
-            }
-            
-            this.lookup_id = function (wid) {
-                console.log("looking up id " + wid);
-                if(is_dz) dict.read(index[wid][1], index[wid][2]);
-                else {
+            this.lookup_id = function (wid, callbk) {
+                var idx = index[wid];
+                if(is_dz) {
+                    var reader = new DictZipFile(JSInflate.inflate);
+                    reader.onsuccess = function () {
+                        reader.read(idx[1], idx[2], function (data) {
+                            process_dictdata(data, function(output) {
+                                callbk(output, idx);
+                            });
+                        });
+                    };
+                    reader.load(files["dict.dz"]);
+                } else {
                     f = files["dict"].slice(
-                        index[wid][1], index[wid][1] + index[wid][2]
+                        idx[1], idx[1] + idx[2]
                     );
-                    reader = new FileReader();
+                    var reader = new FileReader();
                     reader.onload = function (e) {
-                        process_dictdata(e.target.result);
+                        process_dictdata(e.target.result, function(output) {
+                            callbk(output, idx);
+                        });
                     };
                     reader.readAsBinaryString(f);
                 }
-            }
+            };
             
             this.lookup_fuzzy = function (word) {
                 var word_lower = word.toLowerCase();
                 var matches = [];
-                console.log("looking up " + word + "%");
                 for(var s = 0; s < synonyms.length; s++) {
                     if(synonyms[s][0].substr(0,word.length).toLowerCase() == word_lower) {
                         matches.push(synonyms[s]);
@@ -264,7 +274,7 @@
                     if(matches.length > 20) break;
                 }
                 return matches;
-            }
+            };
             
             this.add_resources = function (res_filelist) {
                 var filenames = "";
@@ -272,21 +282,24 @@
                     files["res"].push(res_filelist[f]);
                     filenames += res_filelist[f].name + ", ";
                 }
-                console.log("new res-files: " + filenames);
-            }
+            };
             
             this.request_res = function (filename) {
                 filename = filename.replace(/^\x1E/, '');
                 filename = filename.replace(/\x1F$/, '');
                 for(var f = 0; f < files["res"].length; f++) {
-                    if(filename == files["res"][f].name) {
-                        console.log("Found resource " + filename);
-                        return files["res"][f];
-                    }
+                    var fname = files["res"][f].name;
+                    if(filename == fname.substring(
+                        fname.lastIndexOf("/")+1
+                    )) return files["res"][f];
                 }
                 console.log("Resource "+filename+" not available");
                 return null;
-            }
+            };
+            
+            this.get_key = function (key) {
+                return keywords[key];
+            };
         }
         
         return cls;
