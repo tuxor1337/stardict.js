@@ -18,7 +18,8 @@ Example Code
     $("input[type=file]").change(function(evt) {
         dict.onsuccess = (function (theDict) {
             return function () {
-                theDict.lookup_id(1337, function (data_arr) {
+                wid = theDict.lookup_term("cat")[1];
+                theDict.lookup_id(wid, function (data_arr) {
                     data_arr.forEach(function (d) {
                         type = d[1];
                         data = d[0];
