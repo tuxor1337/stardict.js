@@ -3,6 +3,9 @@ stardict.js
 
 JavaScript library for handling dictionaries in StarDict format.
 
+This project is put on ice till late February 2014! Please contact me if you have plans to work on it in the meantime. Major restructuring plans are already on paper and I might have to think these plans over if somebody comes up with great new ideas.
+---
+
 The code depends on two further javascript libraries, namely:
 
 - https://github.com/tuxor1337/dictzip.js  
