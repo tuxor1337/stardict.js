@@ -252,7 +252,7 @@
         }
         
         return cls;
-    })()
+    })();
     
     GLOBAL.StarDict = StarDict;
 }(this));
