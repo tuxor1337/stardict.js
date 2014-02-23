@@ -42,7 +42,7 @@
     }
     
     var StarDict = (function () {
-        var cls = function() {
+        var cls = function(file_list) {
             var files = {},
                 keywords = {
                     "version": "",
@@ -88,21 +88,11 @@
                 });
             }
             
-            this.load = function (file_list) {
-                return new Promise(function (resolve, reject) {
-                    try {
-                        check_files(file_list);
-                        var reader = new FileReader();
-                        reader.onload = function (evt) {
-                            process_ifo(evt.target.result);
-                            resolve();
-                        };
-                        reader.readAsText(files["ifo"]);
-                    } catch(err) {
-                        reject(err);
-                    }
-                });
-            }
+            // this.load()
+            check_files(file_list);
+            var ifo_reader = new FileReaderSync();
+            process_ifo(ifo_reader.readAsText(files["ifo"]));
+            delete ifo_reader;
             
             this.keyword = function (key) { return keywords[key]; };
             
@@ -154,26 +144,17 @@
                     return output_arr;
                 }
                 
-                return new Promise(function (resolve, reject) {
-                    if(keywords.is_dz) {
-                        var reader = new DictZipFile(
-                            files["dict.dz"],
-                            jszlib_inflate_buffer
-                        );
-                        reader.load().then(function () {
-                            return reader.read(offset, size);
-                        }, reject).then(function(buffer) {
-                            resolve(process_entry_data(buffer));
-                        }, reject);
-                    } else {
-                        var f = files["dict"].slice(offset, offset + size),
-                            reader = new FileReader();
-                        reader.onload = function (evt) {
-                            resolve(process_entry_data(evt.target.result));
-                        };
-                        reader.readAsArrayBuffer(f);
-                    }
-                });
+                if(keywords.is_dz) {
+                    var reader = new DictZipFile(
+                        files["dict.dz"],
+                        jszlib_inflate_buffer
+                    );
+                    return process_entry_data(reader.read(offset, size));
+                } else {
+                    var f = files["dict"].slice(offset, offset + size),
+                        reader = new FileReaderSync();
+                    return process_entry_data(reader.readAsArrayBuffer(f));
+                }
             };
             
             this.synonyms = function (options) {
@@ -216,15 +197,12 @@
                     return output_arr;
                 }
                 
-                return new Promise(function (resolve, reject) {
-                    var reader = new FileReader();
-                    reader.onload = function (evt) {
-                        resolve(process_syn_data(evt.target.result));
-                    };
+                var reader = new FileReaderSync();
+                return process_syn_data(
                     reader.readAsArrayBuffer(
                         files["syn"].slice(options["start_offset"])
-                    );
-                });
+                    )
+                );
             };
             
             this.index = function (options) {
@@ -264,15 +242,12 @@
                     return output_arr;
                 }
                 
-                return new Promise(function (resolve, reject) {
-                    var reader = new FileReader();
-                    reader.onload = function (evt) {
-                        resolve(process_idx_data(evt.target.result));
-                    };
+                var reader = new FileReaderSync();
+                return process_idx_data(
                     reader.readAsArrayBuffer(
                         files["idx"].slice(options["start_offset"])
-                    );
-                });
+                    )
+                );
             };
         }
         

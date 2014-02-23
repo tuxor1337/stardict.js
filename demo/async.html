@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+ <head>
+    <title>stardict.js demo</title>
+    
+    <script src="../stardict.js" type="text/javascript"></script>
+    <script src="dictzip.js" type="text/javascript"></script>
+    <script src="inflate.js" type="text/javascript"></script>
+ </head>
+ <body>
+    <p><input type="file" multiple="multiple" /></p>
+    <script type="text/javascript">
+        var upload = document.getElementsByTagName('input')[0];
+        upload.onchange = function (evt) {
+            evt.preventDefault();
+            var file_list = evt.target.files, file_array = [];
+            for(var i = 0; i < file_list.length; i++) {
+                file_array.push(file_list[i]);
+            }
+            
+            var dict = new StarDict(),
+                synonyms = [], index = [], syn_obj, idx_obj;
+            dict.load(file_array).then(function () {
+                return dict.synonyms({
+                    "include_offset": true,
+                    "include_wid": false,
+                    "include_term": false
+                });
+            }, function (err) {
+                console.error("StarDict load error: " + err.message);
+            }).then(function (raw_synonyms) {
+                console.log("Processing synonym offsets...");
+                raw_synonyms.forEach(function (syn) {
+                    synonyms.push(syn.offset);
+                });
+                return dict.index({
+                    "include_offset": true,
+                    "include_dictpos": false,
+                    "include_term": false
+                });
+            }, function (err) {
+                console.error("StarDict error: " + err.message);
+            }).then(function (raw_index) {
+                console.log("Processing index offsets...");
+                raw_index.forEach(function (idx) {
+                    index.push(idx.offset);
+                });
+                console.log("Retrieving some synonym...");
+                var some_syn = synonyms.length/2 | 0;
+                return dict.synonyms({
+                    "start_offset": synonyms[some_syn] 
+                });
+            }, function (err) {
+                console.error("StarDict error: " + err.message);
+            }).then(function (syn_list) {
+                syn_obj = syn_list[0];
+                return dict.index({
+                    "start_offset": index[syn_obj.wid]
+                });
+            }, function (err) {
+                console.error("StarDict error: " + err.message);
+            }).then(function (idx) {
+                idx_obj = idx[0];
+                return dict.entry(idx_obj.dictpos);
+            }, function (err) {
+                console.error("StarDict error: " + err.message);
+            }).then(function (entry) {
+                console.log("Entry for " + syn_obj.term + " (" + idx_obj.term + "):");
+                entry.forEach(function (data) {
+                    if("mgtxykwhr".indexOf(data.type) != -1)
+                        console.log(data.type + ": " + data.content);
+                });
+            }, function (err) {
+                console.error("StarDict error: " + err.message);
+            });
+        };
+    </script>
+ </body>
+</html>
+

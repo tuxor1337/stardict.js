@@ -3,47 +3,21 @@ stardict.js
 
 JavaScript library for handling dictionaries in StarDict format.
 
-This project is put on ice till late February 2014! Please contact me if you have plans to work on it in the meantime. Major restructuring plans are already on paper and I might have to think these plans over if somebody comes up with great new ideas.
----
-
 The code depends on two further javascript libraries, namely:
 
-- https://github.com/tuxor1337/dictzip.js  
-- https://github.com/augustl/js-inflate
+- https://github.com/tuxor1337/dictzip.js
+- https://github.com/dasmoth/jszlib
 
-referred to in the code as "DictZipFile" and "JSInflate.inflate" respectively.
+referred to in the code as "DictZipFile" and "jszlib_inflate_buffer" respectively.
 
 Example Code
 ---
 
-    var dict = new StarDict();
+Note that the code in the "demo" subdirectory depends on the files "inflate.js",
+"dictzip.js" and "dictzip_sync.js" from the JSZLib project and the dictzip.js
+project respectively. If you want to run the demo code, copy versions of those
+files into the demo directory.
     
-    $("input[type=file]").change(function(evt) {
-        dict.onsuccess = (function (theDict) {
-            return function () {
-                wid = theDict.lookup_term("cat")[1];
-                theDict.lookup_id(wid, function (data_arr) {
-                    data_arr.forEach(function (d) {
-                        type = d[1];
-                        data = d[0];
-                        console.log("type=" + type);
-                        console.log("string=" + data);
-                    });
-                });
-            };
-        })(dict);
-        
-        /* We are expecting a list of files here, containing at least an *.ifo,
-         * an *.idx and a *.dict (or *.dict.dz) file.
-         * Optionaly supported are a *.syn file as well as additional resources
-         * in the form of a tuple of *.rifo/ridx/rdic files.
-         * As a second argument, we can provide another list of files which contains
-         * the contents of the subdirectory "res".
-         */
-        dict.load(evt.target.files);
-    });
-
-
 Further reading
 ---
 

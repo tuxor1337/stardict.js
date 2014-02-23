@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+ <head>
+    <title>stardict.js demo</title>
+ </head>
+ <body>
+    <p><input type="file" multiple="multiple" /></p>
+    <script type="text/javascript">
+        var worker = new Worker("worker.js");
+        worker.onmessage = function (oEvent) {
+            console.log(oEvent.data);
+        };
+        
+        var upload = document.getElementsByTagName('input')[0];
+        upload.onchange = function (evt) {
+            evt.preventDefault();
+            var file_list = evt.target.files, file_array = [];
+            for(var i = 0; i < file_list.length; i++) {
+                file_array.push(file_list[i]);
+            }
+            worker.postMessage(file_array);
+        };
+    </script>
+ </body>
+</html>
+
