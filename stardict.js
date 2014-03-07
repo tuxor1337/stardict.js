@@ -1,3 +1,8 @@
+/**
+ * @license dictzip.js
+ * (c) 2013-2014 http://github.com/tuxor1337/dictzip.js
+ * License: MIT
+ */
 (function (GLOBAL) {        
     function getUintAt(arr, offs) {
         out = 0;
