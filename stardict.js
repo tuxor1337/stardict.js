@@ -1,6 +1,6 @@
 /**
- * @license dictzip.js
- * (c) 2013-2014 http://github.com/tuxor1337/dictzip.js
+ * @license stardict.js
+ * (c) 2013-2014 http://github.com/tuxor1337/stardict.js
  * License: MIT
  */
 (function (GLOBAL) {        
