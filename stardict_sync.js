@@ -40,6 +40,32 @@
         }
         return string;
     }
+            
+    function readAsArrayBuffer(file, offset, size) {
+        if(typeof offset === "undefined") offset = 0;
+        if(typeof size === "undefined") size = -1;
+        if(file.name.substr(-3) == ".dz") {
+            var reader = new DictZipFile(
+                file, jszlib_inflate_buffer
+            );
+            if(size >= 0)
+                return reader.read(offset, size);
+            else
+                return reader.read(offset);
+        } else {
+            var reader = new FileReaderSync();
+            if(size >= 0) 
+               return reader.readAsArrayBuffer(
+                   file.slice(offset, offset + size)
+               );
+            else return reader.readAsArrayBuffer(file.slice(offset));
+        }
+    }
+    
+    function readAsText(file, offset, size) {
+        var buffer = readAsArrayBuffer(file, offset, size);
+        return readUTF8String(new Uint8Array(buffer));
+    }
     
     var StarDict = (function () {
         var cls = function(file_list) {
@@ -50,32 +76,28 @@
                     "wordcount": "",
                     "synwordcount": "",
                     "idxfilesize": "",
-                    "sametypesequence": "",
-                    "is_dz": false,
-                    "dbwordcount": 0
-            };
+                    "sametypesequence": ""
+                };
                 
             function check_files(flist) {
-                ["idx","syn","dict","dict.dz","ifo","rifo","ridx",
-                 "ridx.dz","rdic","rdic.dz"].forEach(function(d) {
+                ["idx","syn","dict","ifo","rifo","ridx","rdic"]
+                .forEach(function(d) {
                     files[d] = null;
                     for(var i=0; i < flist.length; i++) {
-                        ext = flist[i].name.substr(-1-d.length);
-                        if(ext == "." + d) {
+                        var fname = flist[i].name;
+                        if(fname.substr(-1-d.length) == "." + d
+                           || fname.substr(-4-d.length) == "." + d + ".dz") {
                             files[d] = flist[i];
                             flist.splice(i,1);
                         }
                     }
                 });
-                 
+                
                 files["res"] = flist;
                 
-                if(files["dict"] != null) keywords.is_dz = false;
-                else if(files["dict.dz"] != null) keywords.is_dz = true;
-                else throw new Error("Missing *.dict(.dz) file!");
-                
-                if(files["idx"] == null) throw new Error("Missing *.idx file!");
-                if(files["ifo"] == null) throw new Error("Missing *.ifo file!");
+                if(files["dict"] == null) throw new Error("Missing *.dict(.dz) file!");
+                if(files["idx"] == null) throw new Error("Missing *.idx(.dz) file!");
+                if(files["ifo"] == null) throw new Error("Missing *.ifo(.dz) file!");
             }
             
             function process_ifo(text) {
@@ -88,24 +110,55 @@
                 });
             }
             
+            function process_rifo(text) {
+                var lines = text.split("\n");
+                if(lines.shift() != "StarDict's storage ifo file")
+                    throw new Error("Not a proper rifo file");
+                lines.forEach(function (l) {
+                    w = l.split("=");
+                    console.log("rifo: " + w[0] + "=" + w[1]);
+                });
+            }
+            
             // this.load()
             check_files(file_list);
-            var ifo_reader = new FileReaderSync();
-            process_ifo(ifo_reader.readAsText(files["ifo"]));
-            delete ifo_reader;
+            process_ifo(readAsText(files["ifo"]));
+            if(files["rifo"] != null) process_rifo(readAsText(files["rifo"]));
             
             this.keyword = function (key) { return keywords[key]; };
             
             this.resource = function (name) {
                 name = name.replace(/^\x1E/, '').replace(/\x1F$/, '');
-                for(var f = 0; f < files["res"].length; f++) {
-                    var filename = files["res"][f].name;
-                    if(name == filename.substring(
-                        filename.lastIndexOf("/")+1
-                    )) return files["res"][f];
+                function scan_resfiles() {
+                    for(var f = 0; f < files["res"].length; f++) {
+                        var filename = files["res"][f].name;
+                        if(name == filename.substring(
+                            filename.lastIndexOf("/")+1
+                        )) return files["res"][f];
+                    }
+                    return null;
                 }
-                console.log("Resource " + name + " not available");
-                return null;
+                
+                function scan_ridx(buffer) {
+                    var view = new Uint8Array(buffer);
+                    for(var i = 0, j = 0; i < view.length; i++) {
+                        if(readUTF8String(view.subarray(j,i)) == name)
+                            return [getUintAt(view,i+1),getUintAt(view,i+5)];
+                    }
+                    return null;
+                }
+                
+                var result = scan_resfiles();
+                
+                if(result != null) return result;
+                else if(files["ridx"] != null) {
+                    var aPos = scan_ridx(readAsArrayBuffer(files["ridx"]));
+                    if(aPos != null) {
+                        return new Blob([
+                            readAsArrayBuffer(files["rdic"], aPos[0], aPos[1])
+                        ]);
+                    }
+                } else return null;
             };
             
             this.entry = function (dictpos) {
@@ -144,17 +197,9 @@
                     return output_arr;
                 }
                 
-                if(keywords.is_dz) {
-                    var reader = new DictZipFile(
-                        files["dict.dz"],
-                        jszlib_inflate_buffer
-                    );
-                    return process_entry_data(reader.read(offset, size));
-                } else {
-                    var f = files["dict"].slice(offset, offset + size),
-                        reader = new FileReaderSync();
-                    return process_entry_data(reader.readAsArrayBuffer(f));
-                }
+                return process_entry_data(
+                    readAsArrayBuffer(files["dict"], offset, size)
+                );
             };
             
             this.synonyms = function (options) {
@@ -197,11 +242,8 @@
                     return output_arr;
                 }
                 
-                var reader = new FileReaderSync();
                 return process_syn_data(
-                    reader.readAsArrayBuffer(
-                        files["syn"].slice(options["start_offset"])
-                    )
+                    readAsArrayBuffer(files["syn"], options["start_offset"])
                 );
             };
             
@@ -242,11 +284,8 @@
                     return output_arr;
                 }
                 
-                var reader = new FileReaderSync();
                 return process_idx_data(
-                    reader.readAsArrayBuffer(
-                        files["idx"].slice(options["start_offset"])
-                    )
+                    readAsArrayBuffer(files["idx"], options["start_offset"])
                 );
             };
         }
