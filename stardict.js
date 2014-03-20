@@ -4,7 +4,7 @@
  * License: MIT
  */
 (function (GLOBAL) {
-    const DEFAULT_PAD = 30;
+    const DEFAULT_PAD = 25;
     
     function getUintAt(arr, offs) {
         if(offs < 0) offs = arr.length + offs;
@@ -16,10 +16,12 @@
         return out;
     }
     
-    function readUTF8String(bytes) {
+    var readUTF8String = (function () {
         var decoder = new TextDecoder("utf-8");
-        return decoder.decode(bytes);
-    }
+        return function (bytes) {
+            return decoder.decode(bytes);
+        };
+    })();
             
     function readAsArrayBuffer(file, offset, size) {
         if(typeof offset === "undefined") offset = 0;
