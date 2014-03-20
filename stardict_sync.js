@@ -3,8 +3,11 @@
  * (c) 2013-2014 http://github.com/tuxor1337/stardict.js
  * License: MIT
  */
-(function (GLOBAL) {        
+(function (GLOBAL) {
+    const DEFAULT_PAD = 30;
+    
     function getUintAt(arr, offs) {
+        if(offs < 0) offs = arr.length + offs;
         out = 0;
         for (var j = offs; j < offs+4; j++) {
                 out <<= 8;
@@ -14,36 +17,8 @@
     }
     
     function readUTF8String(bytes) {
-        var ix = 0;
-        if(bytes[0] == 0xEF && bytes[1] == 0xBB && bytes[2] == 0xBF) ix = 3;
-        var string = "";
-        for( ; ix < bytes.length; ix++ ) {
-            var byte1 = bytes[ix];
-            if( byte1 < 0x80 ) {
-                string += String.fromCharCode(byte1);
-            } else if( byte1 >= 0xC2 && byte1 < 0xE0 ) {
-                var byte2 = bytes[++ix];
-                string += String.fromCharCode(((byte1&0x1F)<<6)
-                    + (byte2&0x3F));
-            } else if( byte1 >= 0xE0 && byte1 < 0xF0 ) {
-                var byte2 = bytes[++ix];
-                var byte3 = bytes[++ix];
-                string += String.fromCharCode(((byte1&0xFF)<<12)
-                    + ((byte2&0x3F)<<6) + (byte3&0x3F));
-            } else if( byte1 >= 0xF0 && byte1 < 0xF5) {
-                var byte2 = bytes[++ix];
-                var byte3 = bytes[++ix];
-                var byte4 = bytes[++ix];
-                var codepoint = ((byte1&0x07)<<18) + ((byte2&0x3F)<<12)
-                    + ((byte3&0x3F)<<6) + (byte4&0x3F);
-                codepoint -= 0x10000;
-                string += String.fromCharCode(
-                    (codepoint>>10) + 0xD800,
-                    (codepoint&0x3FF) + 0xDC00
-                );
-            }
-        }
-        return string;
+        var decoder = new TextDecoder("utf-8");
+        return decoder.decode(bytes);
     }
             
     function readAsArrayBuffer(file, offset, size) {
@@ -227,33 +202,51 @@
                     }
                 }
                 
-                function process_syn_data(buffer) {
-                    var output_arr = [], view = new Uint8Array(buffer);
-                    for(var i = 0, j = 0; i < view.length; i++) {
-                        if(options["count"] >= 0
-                           && options["count"] <= output_arr.length) break;
+                if(options["count"] < 0)
+                    options["count"] = parseInt(this.keyword("synwordcount"));
+                
+                function create_syn_obj(view, offset) {
+                    var syn_obj = {};
+                    if(options["include_term"])
+                        syn_obj["term"] = readUTF8String(view.subarray(0,-5));
+                    if(options["include_wid"])
+                        syn_obj["wid"] = getUintAt(view, -4);
+                    if(options["include_offset"])
+                        syn_obj["offset"] = offset;
+                    return syn_obj;
+                }
+                
+                function read_more_terms(offset, count, pad) {
+                    if(typeof pad === "undefined") pad = DEFAULT_PAD;
+                    if(count <= 0 || files["syn"].size <= offset) return [];
+                    
+                    var size = count * pad,
+                        buffer = readAsArrayBuffer(files["syn"], offset, size),
+                        view = new Uint8Array(buffer),
+                        output_arr = [], j = 0;
+                        
+                    for(var i = 0; i < view.length-4 && count > output_arr.length; i++) {
                         if(view[i] == 0) {
-                            var syn_obj = {};
-                            if(options["include_term"])
-                                syn_obj["term"] = readUTF8String(view.subarray(j,i));
-                            if(options["include_wid"])
-                                syn_obj["wid"] = getUintAt(view,i+1);
-                            if(options["include_offset"])
-                                syn_obj["offset"] = options["start_offset"] + j;
-                            output_arr.push(syn_obj);
+                            output_arr.push(
+                                create_syn_obj(
+                                    view.subarray(j,i+5),
+                                    offset + j
+                                )
+                            );
                             i += 5; j = i;
                         }
                     }
-                    return output_arr;
+                    return output_arr.concat(
+                        read_more_terms(offset+j, count - output_arr.length, pad+DEFAULT_PAD)
+                    );
                 }
                 
-                return process_syn_data(
-                    readAsArrayBuffer(files["syn"], options["start_offset"])
-                );
+                return read_more_terms(options["start_offset"], options["count"]);
             };
             
             this.index = function (options) {
                 if(typeof options === "undefined") options = {};
+                
                 var options_default = {
                     "count": -1,
                     "start_offset": 0,
@@ -261,6 +254,7 @@
                     "include_dictpos": true,
                     "include_offset": false
                 };
+                
                 for(var prop in options_default) {
                     if(typeof options[prop] === "undefined") {
                         if(prop == "count" && typeof options["start_offset"] !== "undefined")
@@ -269,29 +263,48 @@
                     }
                 }
                 
-                function process_idx_data(buffer) {
-                    var output_arr = [], view = new Uint8Array(buffer);
-                    for(var i = 0, j = 0; i < view.length; i++) {
-                        if(options["count"] >= 0
-                           && options["count"] <= output_arr.length) break;
+                if(options["count"] < 0)
+                    options["count"] = parseInt(this.keyword("wordcount"));
+                
+                function create_idx_obj(view, offset) {
+                    var idx_obj = {};
+                    if(options["include_term"])
+                        idx_obj["term"] = readUTF8String(view.subarray(0,-9));
+                    if(options["include_dictpos"])
+                        idx_obj["dictpos"] = [getUintAt(view,-8),getUintAt(view,-4)];
+                    if(options["include_offset"])
+                        idx_obj["offset"] = offset;
+                    return idx_obj;
+                }
+                
+                var depth = 0;
+                function read_more_terms(offset, count, pad) {
+                    if(typeof pad === "undefined") pad = DEFAULT_PAD;
+                    if(count <= 0 || files["idx"].size <= offset) return [];
+                    
+                    var size = count * pad,
+                        buffer = readAsArrayBuffer(files["idx"], offset, size),
+                        view = new Uint8Array(buffer),
+                        output_arr = [], j = 0;
+                        
+                    for(var i = 0; i < view.length-8 && count > output_arr.length; i++) {
                         if(view[i] == 0) {
-                            var idx_obj = {};
-                            if(options["include_term"])
-                                idx_obj["term"] = readUTF8String(view.subarray(j,i));
-                            if(options["include_dictpos"])
-                                idx_obj["dictpos"] = [getUintAt(view,i+1),getUintAt(view,i+5)];
-                            if(options["include_offset"])
-                                idx_obj["offset"] = options["start_offset"] + j;
-                            output_arr.push(idx_obj);
+                            output_arr.push(
+                                create_idx_obj(
+                                    view.subarray(j,i+9),
+                                    offset + j
+                                )
+                            );
                             i += 9; j = i;
                         }
                     }
-                    return output_arr;
+                    
+                    return output_arr.concat(
+                        read_more_terms(offset+j, count - output_arr.length, pad+DEFAULT_PAD)
+                    );
                 }
                 
-                return process_idx_data(
-                    readAsArrayBuffer(files["idx"], options["start_offset"])
-                );
+                return read_more_terms(options["start_offset"], options["count"]);
             };
         }
         
