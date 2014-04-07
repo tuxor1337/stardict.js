@@ -308,6 +308,75 @@
                 
                 return read_more_terms(options["start_offset"], options["count"]);
             };
+            
+            this.iterable = function () {
+                var objFactory = function(idx_view, syn_view) {
+                    return new function () {
+                        var currType = 0, currOffset = 0,
+                            idxView = idx_view,
+                            synView = syn_view;
+                    
+                        function getEOS(data) {
+                            var view = idxView;
+                            if(data.type == 1) view = synView;
+                            
+                            for(var i = data.offset; i < view.length; i++) {
+                                if(view[i] == 0) return i;
+                            }
+                            return -1;
+                        }
+                        
+                        this.data = function (data) {
+                            var view = idxView;
+                            if(data.type == 1) view = synView;
+                            
+                            if(data.type == 0)
+                                return [
+                                    getUintAt(view, getEOS(data)+1),
+                                    getUintAt(view, getEOS(data)+5)
+                                ];
+                            else return getUintAt(view, getEOS(data)+1);
+                        };
+                        
+                        this.term = function (data) {
+                            var view = idxView;
+                            if(data.type == 1) view = synView;
+                            
+                            return readUTF8String(
+                                view.subarray(data.offset, getEOS(data))
+                            );
+                        };
+                        
+                        this.next = function () {
+                            var j = currOffset, result = null,
+                                view = idxView, datalen = 8;
+                            if(currType == 1) {
+                                view = synView;
+                                datalen = 4;
+                            }
+                            for( ; currOffset < view.length; currOffset++) {
+                                if(view[currOffset] == 0) {
+                                    result = { type: currType, offset: j };
+                                    currOffset += datalen + 1; j = currOffset;
+                                    break;
+                                }
+                            }
+                            if(result == null && currType == 0) {
+                                currType = 1; currOffset = 0;
+                                return this.next();
+                            }
+                            return result;
+                        };
+                    };
+                };
+                
+                var idxBuf = readAsArrayBuffer(files["idx"]),
+                    synBuf = readAsArrayBuffer(files["syn"]);
+                return objFactory(
+                    new Uint8Array(idxBuf),
+                    new Uint8Array(synBuf)
+                );
+            };
         }
         
         return cls;
