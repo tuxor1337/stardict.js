@@ -350,6 +350,8 @@
                             }
                             return result;
                         };
+                        
+                        this.view = view;
                     };
                 };
                 
