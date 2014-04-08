@@ -355,9 +355,12 @@
                     };
                 };
                 
-                var f = (mode == "synonyms") ? "syn" : "idx",
+                var f = (mode == "synonyms") ? "syn" : "idx", buf;
+                if(files[f] == null) return objFactory([]);
+                else {
                     buf = readAsArrayBuffer(files[f]);
-                return objFactory(new Uint8Array(buf));
+                    return objFactory(new Uint8Array(buf));
+                }
             };
         }
         

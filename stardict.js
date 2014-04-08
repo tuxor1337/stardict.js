@@ -262,10 +262,13 @@
                 
                 var f = (mode == "synonyms") ? "syn" : "idx";
                 return new Promise(function (resolve, reject) {
-                    readAsArrayBuffer(files[f])
-                    .then(function (buf) {
-                        resolve(objFactory(new Uint8Array(buf)));
-                    });
+                    if(files[f] == null) resolve(objFactory([]));
+                    else {
+                        readAsArrayBuffer(files[f])
+                        .then(function (buf) {
+                            resolve(objFactory(new Uint8Array(buf)));
+                        });
+                    }
                 });
             };
             
