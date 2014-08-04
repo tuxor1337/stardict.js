@@ -214,64 +214,6 @@
                 });
             };
             
-            this.iterable = function (mode) {
-                if(typeof mode === "undefined") mode = "index";
-                
-                var objFactory = function(view) {
-                    return new function () {
-                        var currOffset = 0;
-                    
-                        function getEOS(offset) {
-                            for(var i = offset; i < view.length; i++) {
-                                if(view[i] == 0) return i;
-                            }
-                            return -1;
-                        }
-                        
-                        this.data = function (offset) {
-                            if(mode == "synonyms")
-                                return getUintAt(view, getEOS(offset)+1);
-                            else return [
-                                getUintAt(view, getEOS(offset)+1),
-                                getUintAt(view, getEOS(offset)+5)
-                            ];
-                        };
-                        
-                        this.term = function (offset) {
-                            return readUTF8String(
-                                view.subarray(offset, getEOS(offset))
-                            );
-                        };
-                        
-                        this.next = function () {
-                            var j = currOffset, result = null,
-                                datalen = (mode == "synonyms") ? 4 : 8;
-                            
-                            for( ; currOffset < view.length; currOffset++) {
-                                if(view[currOffset] == 0) {
-                                    result = j; currOffset += datalen + 1;
-                                    break;
-                                }
-                            }
-                            return result;
-                        };
-                        
-                        this.view = view;
-                    };
-                };
-                
-                var f = (mode == "synonyms") ? "syn" : "idx";
-                return new Promise(function (resolve, reject) {
-                    if(files[f] == null) resolve(objFactory([]));
-                    else {
-                        readAsArrayBuffer(files[f])
-                        .then(function (buf) {
-                            resolve(objFactory(new Uint8Array(buf)));
-                        });
-                    }
-                });
-            };
-            
             this.synonyms = function (options) {
                 if(files["syn"] == null)  return [];
                 if(typeof options === "undefined") options = {};
@@ -403,6 +345,87 @@
                 }
                 
                 return read_more_terms(options["start_offset"], options["count"]);
+            };
+            
+            this.oft = function (mode) {
+                if(typeof mode === "undefined") mode = "index";
+                
+                var f = ((mode == "synonyms") ? "syn" : "idx") + ".oft",
+                    count = parseInt(this.keyword(
+                        ((mode == "synonyms") ? "syn" : "") + "wordcount"
+                    ));
+                
+                if(files[f] == null) {
+                    return new Promise(function (resolve, reject) {
+                        this.iterable(mode).then(function (iterable) {
+                            var currOft = iterable.next(), i = 0,
+                                view = new Uint32Array(count);
+                            while(currOft != null) {
+                                view[i++] = currOft;
+                                currOft = iterable.next();
+                            }
+                            resolve(view.buffer);
+                        });
+                    });
+                } else return readAsArrayBuffer(files[f]);
+            };
+            
+            this.iterable = function (mode) {
+                if(typeof mode === "undefined") mode = "index";
+                
+                var objFactory = function(view) {
+                    return new function () {
+                        var currOffset = 0;
+                    
+                        function getEOS(offset) {
+                            for(var i = offset; i < view.length; i++) {
+                                if(view[i] == 0) return i;
+                            }
+                            return -1;
+                        }
+                        
+                        this.data = function (offset) {
+                            if(mode == "synonyms")
+                                return getUintAt(view, getEOS(offset)+1);
+                            else return [
+                                getUintAt(view, getEOS(offset)+1),
+                                getUintAt(view, getEOS(offset)+5)
+                            ];
+                        };
+                        
+                        this.term = function (offset) {
+                            return readUTF8String(
+                                view.subarray(offset, getEOS(offset))
+                            );
+                        };
+                        
+                        this.next = function () {
+                            var j = currOffset, result = null,
+                                datalen = (mode == "synonyms") ? 4 : 8;
+                            
+                            for( ; currOffset < view.length; currOffset++) {
+                                if(view[currOffset] == 0) {
+                                    result = j; currOffset += datalen + 1;
+                                    break;
+                                }
+                            }
+                            return result;
+                        };
+                        
+                        this.view = view;
+                    };
+                };
+                
+                var f = (mode == "synonyms") ? "syn" : "idx";
+                return new Promise(function (resolve, reject) {
+                    if(files[f] == null) resolve(objFactory([]));
+                    else {
+                        readAsArrayBuffer(files[f])
+                        .then(function (buf) {
+                            resolve(objFactory(new Uint8Array(buf)));
+                        });
+                    }
+                });
             };
         }
         

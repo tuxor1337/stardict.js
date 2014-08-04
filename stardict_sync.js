@@ -56,13 +56,16 @@
                     "version": "",
                     "bookname": "",
                     "wordcount": "",
-                    "synwordcount": "",
+                    "synwordcount": "0",
                     "idxfilesize": "",
                     "sametypesequence": ""
                 };
                 
             function check_files(flist) {
-                ["idx","syn","dict","ifo","rifo","ridx","rdic"]
+                [
+                    "idx", "idx.oft", "syn", "syn.oft",
+                    "dict", "ifo", "rifo", "ridx", "rdic"
+                ]
                 .forEach(function(d) {
                     files[d] = null;
                     for(var i=0; i < flist.length; i++) {
@@ -307,6 +310,28 @@
                 }
                 
                 return read_more_terms(options["start_offset"], options["count"]);
+            };
+            
+            this.oft = function (mode) {
+                if(typeof mode === "undefined") mode = "index";
+                
+                var f = ((mode == "synonyms") ? "syn" : "idx") + ".oft",
+                    count = parseInt(this.keyword(
+                        ((mode == "synonyms") ? "syn" : "") + "wordcount"
+                    ));
+
+                var buf;
+                if(files[f] == null) {
+                    var iterable = this.iterable(mode),
+                        currOft = iterable.next(), i = 0,
+                        view = new Uint32Array(count);
+                    while(currOft != null) {
+                        view[i++] = currOft;
+                        currOft = iterable.next();
+                    }
+                    buf = view.buffer;
+                } else buf = readAsArrayBuffer(files[f]);
+                return buf;
             };
             
             this.iterable = function (mode) {
