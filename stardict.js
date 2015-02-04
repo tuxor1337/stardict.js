@@ -187,18 +187,19 @@
                             t = type_str[0];
                             type_str = type_str.substr(1);
                         } else {
-                            t = String.fromCharCode(data[0]);
-                            rawdata = rawdata.slice(1);
+                            t = String.fromCharCode(rawdata[0]);
+                            rawdata = rawdata.subarray(1);
                         }
                         if(is_sts && "" == type_str) d = rawdata;
                         else if(t == t.toUpperCase()) {
-                            end = getUIntAt(rawdata,0);
-                            d = rawdata.slice(4,end+4);
-                            rawdata = rawdata.slice(end+4);
+                            var end = getUIntAt(rawdata,0);
+                            d = rawdata.subarray(4,end+4);
+                            rawdata = rawdata.subarray(end+4);
                         } else {
-                            end = rawdata.indexOf(0);
-                            d = rawdata.slice(0,end);
-                            rawdata = rawdata.slice(end+1);
+                            var end = 0;
+                            while(rawdata[end] != 0) end++;
+                            d = rawdata.subarray(0,end);
+                            rawdata = rawdata.subarray(end+1);
                         }
                         if("mgtxykwh".indexOf(t) != -1) d = readUTF8String(d);
                         output_arr.push({"type": t, "content": d});
