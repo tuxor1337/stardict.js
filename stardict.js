@@ -28,7 +28,7 @@
         if(typeof size === "undefined") size = -1;
         if(file.name.substr(-3) == ".dz") {
             var reader = new DictZipFile(
-                file, jszlib_inflate_buffer
+                file, pako.inflateRaw
             );
             if(size >= 0)
                 return reader.read(offset, size);

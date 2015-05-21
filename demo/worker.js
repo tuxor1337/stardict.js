@@ -8,7 +8,7 @@ var console = {
     }
 };
 
-importScripts("inflate.js");
+importScripts("pako_inflate.js");
 importScripts("dictzip_sync.js");
 importScripts("../stardict_sync.js");
 
