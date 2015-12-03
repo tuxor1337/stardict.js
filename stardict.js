@@ -95,6 +95,8 @@
                     throw new Error("Not a proper ifo file");
                 lines.forEach(function (l) {
                     w = l.split("=");
+                    // Handle missing *.syn file
+                    if(w[0] == "synwordcount" && files["syn"] == null) w[1] = 0;
                     keywords[w[0]] = w[1];
                 });
             }
