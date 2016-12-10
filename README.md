@@ -151,7 +151,7 @@ But the methods return corresponding `Promise` object, e.g.
 Further reading
 ---
 
-Format documentation (original documentation is lost): http://code.google.com/p/babiloo/wiki/StarDict_format
+Format documentation: http://stardict-4.sourceforge.net/StarDictFileFormat
  
 Python lib: http://code.google.com/p/pytoolkits/source/browse/trunk/utils/stardict/StarDict.py
 Java lib: http://code.google.com/p/toolkits/source/browse/trunk/android/YAStarDict/src/com/googlecode/toolkits/stardict/StarDict.java
