@@ -1,11 +1,27 @@
 /**
- * @license stardict.js
- * (c) 2013-2014 http://github.com/tuxor1337/stardict.js
- * License: MIT
+ * Copyright (c) 2018 tuxor1337
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
  */
 (function (GLOBAL) {
     const DEFAULT_PAD = 25;
-    
+
     function getUintAt(arr, offs) {
         if(offs < 0) offs = arr.length + offs;
         out = 0;
@@ -15,14 +31,14 @@
         }
         return out;
     }
-    
+
     var readUTF8String = (function () {
         var decoder = new TextDecoder("utf-8");
         return function (bytes) {
             return decoder.decode(bytes);
         };
     })();
-    
+
     function readAsArrayBuffer(file, offset, size) {
         if(typeof offset === "undefined") offset = 0;
         if(typeof size === "undefined") size = -1;
@@ -37,7 +53,7 @@
         } else {
             var reader = new FileReader();
             return new Promise(function (resolve, reject) {
-                if(size >= 0) 
+                if(size >= 0)
                     reader.readAsArrayBuffer(
                         file.slice(offset, offset + size)
                     );
@@ -48,14 +64,14 @@
             });
         }
     }
-    
+
     function readAsText(file, offset, size) {
         return readAsArrayBuffer(file, offset, size)
         .then(function (buffer) {
             return readUTF8String(new Uint8Array(buffer));
         });
     }
-    
+
     var StarDict = (function () {
         var cls = function() {
             var files = {},
@@ -67,7 +83,7 @@
                     "idxfilesize": "",
                     "sametypesequence": ""
                 };
-                
+
             function check_files(flist) {
                 ["idx","syn","dict","ifo","rifo","ridx","rdic"]
                 .forEach(function(d) {
@@ -81,14 +97,14 @@
                         }
                     }
                 });
-                
+
                 files["res"] = flist;
-                
+
                 if(files["dict"] == null) throw new Error("Missing *.dict(.dz) file!");
                 if(files["idx"] == null) throw new Error("Missing *.idx(.dz) file!");
                 if(files["ifo"] == null) throw new Error("Missing *.ifo(.dz) file!");
             }
-            
+
             function process_ifo(text) {
                 var lines = text.split("\n");
                 if(lines.shift() != "StarDict's dict ifo file")
@@ -100,7 +116,7 @@
                     keywords[w[0]] = w[1];
                 });
             }
-            
+
             function process_rifo(text) {
                 var lines = text.split("\n");
                 if(lines.shift() != "StarDict's storage ifo file")
@@ -110,7 +126,7 @@
                     console.log("rifo: " + w[0] + "=" + w[1]);
                 });
             }
-            
+
             this.load = function (file_list) {
                 return new Promise(function (resolve, reject) {
                     try {
@@ -131,9 +147,9 @@
                     }
                 });
             }
-            
+
             this.keyword = function (key) { return keywords[key]; };
-            
+
             this.resource = function (name) {
                 name = name.replace(/^\x1E/, '').replace(/\x1F$/, '');
                 function scan_resfiles() {
@@ -145,7 +161,7 @@
                     }
                     return null;
                 }
-                
+
                 function scan_ridx(buffer) {
                     var view = new Uint8Array(buffer);
                     for(var i = 0, j = 0; i < view.length; i++) {
@@ -154,7 +170,7 @@
                     }
                     return null;
                 }
-                
+
                 return new Promise(function (resolve, reject) {
                     var result = scan_resfiles();
                     if(result != null) resolve(result);
@@ -173,10 +189,10 @@
                     } else resolve(null);
                 });
             };
-            
+
             this.entry = function (dictpos) {
                 var offset = dictpos[0], size = dictpos[1];
-                
+
                 function process_entry_data(buffer) {
                     var rawdata = new Uint8Array(buffer),
                         output_arr = [], is_sts = false;
@@ -210,25 +226,25 @@
                     }
                     return output_arr;
                 }
-                
+
                 return readAsArrayBuffer(files["dict"], offset, size)
                 .then(function (buffer) {
                     return process_entry_data(buffer);
                 });
             };
-            
+
             this.synonyms = function (options) {
                 if(files["syn"] == null)  return [];
                 if(typeof options === "undefined") options = {};
-                
+
                 var options_default = {
                     "count": -1,
                     "start_offset": 0,
-                    "include_term": true, 
+                    "include_term": true,
                     "include_wid": true,
                     "include_offset": false
                 };
-                
+
                 for(var prop in options_default) {
                     if(typeof options[prop] === "undefined") {
                         if(prop == "count" && typeof options["start_offset"] !== "undefined")
@@ -236,10 +252,10 @@
                         else options[prop] = options_default[prop];
                     }
                 }
-                
+
                 if(options["count"] < 0)
                     options["count"] = parseInt(this.keyword("synwordcount"));
-                
+
                 function create_syn_obj(view, offset) {
                     var syn_obj = {};
                     if(options["include_term"])
@@ -250,7 +266,7 @@
                         syn_obj["offset"] = offset;
                     return syn_obj;
                 }
-                
+
                 function read_more_terms(offset, count, pad) {
                     if(typeof pad === "undefined") pad = DEFAULT_PAD;
                     return new Promise(function (resolve, reject) {
@@ -280,21 +296,21 @@
                         });
                     });
                 }
-                
+
                 return read_more_terms(options["start_offset"], options["count"]);
             };
-            
+
             this.index = function (options) {
                 if(typeof options === "undefined") options = {};
-                
+
                 var options_default = {
                     "count": -1,
                     "start_offset": 0,
-                    "include_term": true, 
+                    "include_term": true,
                     "include_dictpos": true,
                     "include_offset": false
                 };
-                
+
                 for(var prop in options_default) {
                     if(typeof options[prop] === "undefined") {
                         if(prop == "count" && typeof options["start_offset"] !== "undefined")
@@ -302,10 +318,10 @@
                         else options[prop] = options_default[prop];
                     }
                 }
-                
+
                 if(options["count"] < 0)
                     options["count"] = parseInt(this.keyword("wordcount"));
-                
+
                 function create_idx_obj(view, offset) {
                     var idx_obj = {};
                     if(options["include_term"])
@@ -316,7 +332,7 @@
                         idx_obj["offset"] = offset;
                     return idx_obj;
                 }
-                
+
                 function read_more_terms(offset, count, pad) {
                     if(typeof pad === "undefined") pad = DEFAULT_PAD;
                     return new Promise(function (resolve, reject) {
@@ -346,18 +362,18 @@
                         });
                     });
                 }
-                
+
                 return read_more_terms(options["start_offset"], options["count"]);
             };
-            
+
             this.oft = function (mode) {
                 if(typeof mode === "undefined") mode = "index";
-                
+
                 var f = ((mode == "synonyms") ? "syn" : "idx") + ".oft",
                     count = parseInt(this.keyword(
                         ((mode == "synonyms") ? "syn" : "") + "wordcount"
                     ));
-                
+
                 if(files[f] == null) {
                     return new Promise(function (resolve, reject) {
                         this.iterable(mode).then(function (iterable) {
@@ -372,21 +388,21 @@
                     });
                 } else return readAsArrayBuffer(files[f]);
             };
-            
+
             this.iterable = function (mode) {
                 if(typeof mode === "undefined") mode = "index";
-                
+
                 var objFactory = function(view) {
                     return new function () {
                         var currOffset = 0;
-                    
+
                         function getEOS(offset) {
                             for(var i = offset; i < view.length; i++) {
                                 if(view[i] == 0) return i;
                             }
                             return -1;
                         }
-                        
+
                         this.data = function (offset) {
                             if(mode == "synonyms")
                                 return getUintAt(view, getEOS(offset)+1);
@@ -395,17 +411,17 @@
                                 getUintAt(view, getEOS(offset)+5)
                             ];
                         };
-                        
+
                         this.term = function (offset) {
                             return readUTF8String(
                                 view.subarray(offset, getEOS(offset))
                             );
                         };
-                        
+
                         this.next = function () {
                             var j = currOffset, result = null,
                                 datalen = (mode == "synonyms") ? 4 : 8;
-                            
+
                             for( ; currOffset < view.length; currOffset++) {
                                 if(view[currOffset] == 0) {
                                     result = j; currOffset += datalen + 1;
@@ -414,11 +430,11 @@
                             }
                             return result;
                         };
-                        
+
                         this.view = view;
                     };
                 };
-                
+
                 var f = (mode == "synonyms") ? "syn" : "idx";
                 return new Promise(function (resolve, reject) {
                     if(files[f] == null) resolve(objFactory([]));
@@ -431,10 +447,10 @@
                 });
             };
         }
-        
+
         return cls;
     })();
-    
+
     GLOBAL.StarDict = StarDict;
 }(this));
 
