@@ -41,57 +41,77 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
             var dict = new StarDict(),
                 synonyms = [], index = [], syn_obj, idx_obj;
             dict.load(file_array).then(function () {
+                console.log("Reading keyword from ifo...");
+                return dict.keyword("bookname");
+            }, function (err) {
+                console.error(`StarDict.load error: ${err.message}`);
+            }).then(function (keyword) {
+                console.log(`Dictionary name: ${keyword}`);
                 return dict.synonyms({
                     "include_offset": true,
                     "include_wid": false,
                     "include_term": false
                 });
             }, function (err) {
-                console.error("StarDict load error: " + err.message);
+                console.error(`StarDict.keyword error: ${err.message}`);
             }).then(function (raw_synonyms) {
-                console.log("Processing synonym offsets...");
-                raw_synonyms.forEach(function (syn) {
-                    synonyms.push(syn.offset);
-                });
+                if (raw_synonyms.length === 0) {
+                  console.log("Dictionary doesn't define any synonyms.");
+                } else {
+                  console.log("Processing synonym offsets...");
+                  raw_synonyms.forEach(function (syn) {
+                      synonyms.push(syn.offset);
+                  });
+                }
                 return dict.index({
                     "include_offset": true,
                     "include_dictpos": false,
                     "include_term": false
                 });
             }, function (err) {
-                console.error("StarDict error: " + err.message);
+                console.error(`StarDict.index error: ${err.message}`);
             }).then(function (raw_index) {
                 console.log("Processing index offsets...");
                 raw_index.forEach(function (idx) {
                     index.push(idx.offset);
                 });
-                console.log("Retrieving some synonym...");
-                var some_syn = synonyms.length/2 | 0;
+                if (synonyms.length == 0)
+                  return [];
+                console.log(`Retrieving one of the ${synonyms.length} synonyms...`);
+                var some_syn = synonyms.length / 2 | 0;
                 return dict.synonyms({
                     "start_offset": synonyms[some_syn]
                 });
             }, function (err) {
-                console.error("StarDict error: " + err.message);
+                console.error(`StarDict.dict error: ${err.message}`);
             }).then(function (syn_list) {
-                syn_obj = syn_list[0];
+                if (syn_list.length == 0) {
+                    console.log(`Retrieving one of the ${index.length} entries...`);
+                    syn_obj = {"term": null, "wid": index.length / 2};
+                } else {
+                    syn_obj = syn_list[0];
+                }
                 return dict.index({
                     "start_offset": index[syn_obj.wid]
                 });
             }, function (err) {
-                console.error("StarDict error: " + err.message);
+                console.error(`StarDict.synonyms error: ${err.message}`);
             }).then(function (idx) {
                 idx_obj = idx[0];
                 return dict.entry(idx_obj.dictpos);
             }, function (err) {
-                console.error("StarDict error: " + err.message);
+                console.error(`StarDict.index error: ${err.message}`);
             }).then(function (entry) {
-                console.log("Entry for " + syn_obj.term + " (" + idx_obj.term + "):");
+                let term_str = idx_obj.term;
+                if (syn_obj.term !== null)
+                    term_str = `${syn_obj.term} (${term_str})`;
+                console.log(`Entry for ${term_str}:`);
                 entry.forEach(function (data) {
                     if("mgtxykwhr".indexOf(data.type) != -1)
                         console.log(data.type + ": " + data.content);
                 });
             }, function (err) {
-                console.error("StarDict error: " + err.message);
+                console.error(`StarDict.entry error: ${err.message}`);
             });
         };
     </script>

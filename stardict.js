@@ -46,10 +46,12 @@
             var reader = new DictZipFile(
                 file, pako.inflateRaw
             );
-            if(size >= 0)
-                return reader.read(offset, size);
-            else
-                return reader.read(offset);
+            return reader.load().then(function () {
+              if(size >= 0)
+                  return reader.read(offset, size);
+              else
+                  return reader.read(offset);
+            });
         } else {
             var reader = new FileReader();
             return new Promise(function (resolve, reject) {

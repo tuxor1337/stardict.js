@@ -5,8 +5,8 @@ JavaScript library for handling dictionaries in StarDict format.
 
 The code depends on two further javascript libraries, namely:
 
-- https://github.com/tuxor1337/dictzip.js
-- https://github.com/nodeca/pako
+- https://framagit.org/tuxor1337/dictzip.js
+- https://github.com/nodeca/pako/tree/0.2.8 (version 0.2.x)
 
 referred to in the code as "DictZipFile" and "pako" respectively.
 
@@ -151,7 +151,6 @@ But the methods return corresponding `Promise` object, e.g.
 Further reading
 ---
 
-Format documentation: http://stardict-4.sourceforge.net/StarDictFileFormat
- 
-Python lib: http://code.google.com/p/pytoolkits/source/browse/trunk/utils/stardict/StarDict.py
-Java lib: http://code.google.com/p/toolkits/source/browse/trunk/android/YAStarDict/src/com/googlecode/toolkits/stardict/StarDict.java
+* Format documentation: http://stardict-4.sourceforge.net/StarDictFileFormat
+* Python lib: http://code.google.com/p/pytoolkits/source/browse/trunk/utils/stardict/StarDict.py
+* Java lib: http://code.google.com/p/toolkits/source/browse/trunk/android/YAStarDict/src/com/googlecode/toolkits/stardict/StarDict.java
